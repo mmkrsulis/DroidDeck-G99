@@ -38,6 +38,15 @@ class VkBridgeComponent(private val socket: File, private val logFile: File) : S
         // Setup's "Safe mode", for a new server and for the in-app one that is reused (it reads
         // the file again at each client): the JNI call stays as it is.
         writeMode(cacheDir, com.droiddeck.launcher.session.SessionPrefs.vkBridgeMode(app()))
+        // Mali-G57 r32p1 exposes Vulkan 1.1, while Gamescope requires Vulkan 1.2.
+        // MaliBridge v0.5.2 can safely promote this device after its startup probes pass.
+        val overrideFile = File(cacheDir, "env")
+        val overrideLines = runCatching { overrideFile.readLines() }.getOrDefault(emptyList())
+            .filterNot { it.substringBefore('=').trim() == "VKBRIDGE_PROMOTE_API" }
+            .filter { it.isNotBlank() }
+        runCatching {
+            overrideFile.writeText((overrideLines + "VKBRIDGE_PROMOTE_API=1").joinToString("\n", postfix = "\n"))
+        }.onFailure { Log.w(TAG, "could not enable Vulkan API promotion: $it") }
         // A separate process by default: a crash in the GPU driver (seen once inside Mali's
         // vkBeginCommandBuffer) then ends the session, not the app. In-process gave the same driver
         // and the same 119 extensions on the Tab S10+; it remains the fallback.
