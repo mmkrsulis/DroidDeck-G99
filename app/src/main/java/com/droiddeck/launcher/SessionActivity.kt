@@ -402,17 +402,24 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
             finish()
             return
         }
-        if (!SessionState.running && SessionState.phase in setOf(SessionPhase.IDLE, SessionPhase.FAILED)) {
-            val mode = intent.getStringExtra(SessionService.EXTRA_MODE) ?: SessionService.MODE_STEAM
+        val startingSession = !SessionState.running && SessionState.phase in setOf(SessionPhase.IDLE, SessionPhase.FAILED)
+        if (startingSession) {
+            val requestedMode = intent.getStringExtra(SessionService.EXTRA_MODE)
+            val mode = requestedMode ?: SessionService.MODE_STEAM
+            val program = intent.getStringExtra(SessionService.EXTRA_PROGRAM)
             SessionState.programArgs = intent.getStringArrayExtra(SessionService.EXTRA_PROGRAM_ARGS)?.toList().orEmpty()
-            SessionEvents.begin(this, mode, SessionPaths.label(mode, intent.getStringExtra(SessionService.EXTRA_PROGRAM)))
-        }
-        if (!SessionState.running && SessionState.phase in setOf(SessionPhase.IDLE, SessionPhase.FAILED)) {
-            SessionState.program = intent.getStringExtra(SessionService.EXTRA_PROGRAM)
+            SessionEvents.begin(this, mode, SessionPaths.label(mode, program))
+            SessionState.program = program
             SessionState.programArgs = intent.getStringArrayExtra(SessionService.EXTRA_PROGRAM_ARGS)?.toList().orEmpty()
             SessionState.steamUi = intent.getStringExtra(SessionService.EXTRA_STEAM_UI)
             SessionState.steamUrl = intent.getStringExtra(SessionService.EXTRA_STEAM_URL)
             SessionState.steamVr = intent.getBooleanExtra(EXTRA_STEAMVR, false)
+            SessionEvents.record("session.launch_request", mapOf(
+                "requestedMode" to requestedMode,
+                "effectiveMode" to mode,
+                "program" to program,
+                "args" to SessionState.programArgs,
+            ))
         } else if (intent.getBooleanExtra(EXTRA_STEAMVR, false) && SessionState.mode == SessionService.MODE_STEAM) {
             SessionState.steamVr = true
         }

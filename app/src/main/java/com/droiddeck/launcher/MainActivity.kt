@@ -1544,9 +1544,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchProgram(path: String) {
-        startActivity(Intent(this, SessionActivity::class.java)
+        val next = Intent(this, SessionActivity::class.java)
             .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
-            .putExtra(SessionService.EXTRA_PROGRAM, path))
+            .putExtra(SessionService.EXTRA_PROGRAM, path)
+        when (com.droiddeck.launcher.session.ProgramLaunch.route(
+            SessionState.running, SessionState.stopRequested, SessionState.mode, SessionState.program, path,
+        )) {
+            com.droiddeck.launcher.session.ProgramLaunch.Route.START -> startSessionOrWait(next)
+            com.droiddeck.launcher.session.ProgramLaunch.Route.BUSY -> android.widget.Toast.makeText(
+                this, R.string.game_link_session_busy, android.widget.Toast.LENGTH_LONG,
+            ).show()
+            com.droiddeck.launcher.session.ProgramLaunch.Route.RESUME ->
+                startActivity(Intent(this, SessionActivity::class.java)
+                    .setAction(SessionService.ACTION_RESUME)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+            com.droiddeck.launcher.session.ProgramLaunch.Route.SWITCH -> pendingSwitch = next
+        }
     }
 
     private fun installPackage(id: String) {
