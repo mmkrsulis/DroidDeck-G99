@@ -630,6 +630,13 @@ class SessionService : Service() {
         }
         (if (bridge || venus) null else LinuxVulkanDriver.resolveIcdPath(this, linuxDriverId))
             ?.let { guest.add(LinuxVulkanDriver.ENV + "=" + it) }
+        val importedDriverName = LinuxVulkanDriverManager(this).getDriverName(linuxDriverId)
+        com.droiddeck.launcher.gpu.GamescopeBackend.forImportedDriver(
+            com.droiddeck.launcher.core.DeviceSupport.adreno(), importedDriverName,
+        )?.let {
+            guest.add("BL_GAMESCOPE_BACKEND=$it")
+            Log.i(TAG, "gamescope: $it backend for imported $importedDriverName")
+        }
         if (!com.droiddeck.launcher.core.DeviceSupport.adreno() && lastXwaylandCrashed()) {
             guest.add("XWAYLAND_NO_GLAMOR=1")
             Log.w(TAG, "xwayland: the last session's Xwayland crashed; glamor off for this one (XWAYLAND_NO_GLAMOR=1)")
