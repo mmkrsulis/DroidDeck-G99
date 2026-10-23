@@ -1,4 +1,16 @@
 #!/bin/bash
+# The MT8781 Mali-G57 path presents Gamescope through the host Wayland swapchain. The nested
+# dma-buf backend cannot negotiate this Android driver's modifiers; Steam's GL/X11 windows stay
+# on llvmpipe while Gamescope and games use MaliBridge Vulkan.
+case ${BL_VKBRIDGE:-0} in
+1)
+  export BL_GAMESCOPE_BACKEND=sdl
+  export SDL_VIDEODRIVER=wayland
+  export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
+  export GALLIUM_DRIVER=llvmpipe
+  export LIBGL_ALWAYS_SOFTWARE=true
+  ;;
+esac
 set -u
 # A GPU that is not an Adreno (BL_RAISE_NOFILE=1): the open-files limit goes up to the hard limit
 # for the whole session tree (gamescope, Steam, games). A Mali PanVK session ran out after ten

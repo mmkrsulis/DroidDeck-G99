@@ -12,6 +12,22 @@ DESKTOP_GPU = Path(__file__).resolve().parents[1] / "linuxfs/desktop/droiddeck-g
 
 
 class GamescopeBackendTest(unittest.TestCase):
+    def test_vkbridge_selects_sdl_in_the_staged_session_script(self):
+        source = SESSION.read_text()
+        prelude = source[:source.index("set -u")]
+        script = prelude + '\nprintf "%s\\n" "$BL_GAMESCOPE_BACKEND" "$SDL_VIDEODRIVER" "${MESA_LOADER_DRIVER_OVERRIDE:-}" "${GALLIUM_DRIVER:-}" "${LIBGL_ALWAYS_SOFTWARE:-}"\n'
+        env = dict(os.environ)
+        env["BL_VKBRIDGE"] = "1"
+        result = subprocess.run(["bash", "-c", script], env=env, text=True,
+                                capture_output=True, timeout=5)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(["sdl", "wayland", "llvmpipe", "llvmpipe", "true"],
+                         result.stdout.splitlines())
+
+    def test_no_unstaged_usr_bin_session_copy(self):
+        wrong_path = SESSION.parents[2] / "bin/droiddeck-session"
+        self.assertFalse(wrong_path.exists(), f"unused duplicate session script: {wrong_path}")
+
     def select(self, backend=None):
         source = SESSION.read_text()
         start = source.index('  backend=${BL_GAMESCOPE_BACKEND:-wayland}')
